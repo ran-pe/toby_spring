@@ -3,46 +3,27 @@ package springbook.user.dao;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
-import springbook.user.domain.User;
 
 import javax.sql.DataSource;
+import java.sql.SQLException;
 
 @Configuration
-public class DaoFactory {
+public class CountingDaoFactory {
 
     @Bean
     public UserDao userDao() throws ClassNotFoundException {
-        /*
-        // 생성자를 이용한 주입방식
-        return new UserDao(connectionMaker());
-        */
-
-        // 수정자를 이용한 주입방식
-        /*
-        UserDao userDao = new UserDao();
-        userDao.setConnectionMaker(connectionMaker());
-        return userDao;
-        */
-
-        // DataSource 타입의 빈을 DI 받는 userDao() 빈 정의 메소드
         UserDao userDao = new UserDao();
         userDao.setDataSource(dataSource());
         return userDao;
-
-    }
-
-    @Bean
-    public AccountDao accountDao() {
-        return new AccountDao(connectionMaker());
-    }
-
-    @Bean
-    public MessageDao messageDao() {
-        return new MessageDao(connectionMaker());
     }
 
     @Bean
     public ConnectionMaker connectionMaker() {
+        return new CountingConnectionMaker(realConnectionMaker());
+    }
+
+    @Bean
+    public ConnectionMaker realConnectionMaker() {
         return new DConnectionMaker();
     }
 

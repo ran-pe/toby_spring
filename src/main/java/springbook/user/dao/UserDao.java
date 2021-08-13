@@ -2,6 +2,7 @@ package springbook.user.dao;
 
 import springbook.user.domain.User;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -9,25 +10,32 @@ import java.sql.SQLException;
 
 public class UserDao {
 
-    private SimpleConnectionMaker simpleConnectionMaker;
-    private ConnectionMaker connectionMaker;
+    private DataSource dataSource;
 
-    // 2. 수정후 생성자
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    // 임시 DBConnector
+//    private ConnectionMaker connectionMaker;
+
+    /*
+    // 1. 생성자를 이용한 의존관계 주입
     public UserDao(ConnectionMaker connectionMaker) {
         this.connectionMaker = connectionMaker;
     }
+    */
 
-    // 1. 수정전 생성자
-/*
-    public UserDao() {
-        simpleConnectionMaker = new SimpleConnectionMaker();
-        connectionMaker = new DConnectionMaker();
+
+    // 2. 수정자(setter)를 이용한 의존관계 주입
+    /*
+    public void setConnectionMaker(ConnectionMaker connectionMaker) {
+        this.connectionMaker = connectionMaker;
     }
-*/
-
+    */
 
     public void add(User user) throws ClassNotFoundException, SQLException {
-        Connection c = connectionMaker.makeConnection();
+        Connection c = dataSource.getConnection();
         PreparedStatement ps = c.prepareStatement(
                 "insert into users(id, name, password) value(?,?,?)"
         );
@@ -41,7 +49,7 @@ public class UserDao {
     }
 
     public User get(String id) throws ClassNotFoundException, SQLException {
-        Connection c = connectionMaker.makeConnection();
+        Connection c = dataSource.getConnection();
         PreparedStatement ps = c.prepareStatement(
                 "select * from users where id = ?"
         );
