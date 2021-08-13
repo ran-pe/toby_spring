@@ -2,14 +2,32 @@ package springbook.user.dao;
 
 import springbook.user.domain.User;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class UserDao {
 
-    public void add(User user) throws ClassNotFoundException, SQLException {
-        Class.forName("com.mysql.jdbc.Driver");
-        Connection c = DriverManager.getConnection("jdbc:mysql://localhost/springbook?serverTimezone=UTC", "youngran", "eodfks09");
+    private SimpleConnectionMaker simpleConnectionMaker;
+    private ConnectionMaker connectionMaker;
 
+    // 2. 수정후 생성자
+    public UserDao(ConnectionMaker connectionMaker) {
+        this.connectionMaker = connectionMaker;
+    }
+
+    // 1. 수정전 생성자
+/*
+    public UserDao() {
+        simpleConnectionMaker = new SimpleConnectionMaker();
+        connectionMaker = new DConnectionMaker();
+    }
+*/
+
+
+    public void add(User user) throws ClassNotFoundException, SQLException {
+        Connection c = connectionMaker.makeConnection();
         PreparedStatement ps = c.prepareStatement(
                 "insert into users(id, name, password) value(?,?,?)"
         );
@@ -23,9 +41,7 @@ public class UserDao {
     }
 
     public User get(String id) throws ClassNotFoundException, SQLException {
-        Class.forName("com.mysql.jdbc.Driver");
-        Connection c = DriverManager.getConnection("jdbc:mysql://localhost/springbook?serverTimezone=UTC", "youngran", "eodfks09");
-
+        Connection c = connectionMaker.makeConnection();
         PreparedStatement ps = c.prepareStatement(
                 "select * from users where id = ?"
         );
@@ -44,23 +60,16 @@ public class UserDao {
         return user;
     }
 
-    public static void main(String[] args) throws ClassNotFoundException, SQLException {
-        UserDao userDao = new UserDao();
+    //2.. 추상메소드로 구현한 소스
+//    public abstract Connection getConnection() throws ClassNotFoundException, SQLException;
 
-        User user = new User();
-        user.setId("horany");
-        user.setName("영란");
-        user.setPassword("eodfks09");
-
-        userDao.add(user);
-
-        System.out.println(user.getId() + " 등록 성공");
-        
-        User user2 = userDao.get(user.getId());
-        System.out.println(user2.getName());
-        System.out.println(user2.getPassword());
-
-        System.out.println(user2.getId() + " 조회 성공");
+    // 1. DB Connection 을 직접 구현한 소스
+    /*
+    public Connection getConnection() throws ClassNotFoundException, SQLException {
+        Class.forName("com.mysql.jdbc.Driver");
+        Connection c = DriverManager.getConnection("jdbc:mysql://localhost/springbook?serverTimezone=UTC", "youngran", "eodfks09");
+        return c;
     }
+    */
 
 }
