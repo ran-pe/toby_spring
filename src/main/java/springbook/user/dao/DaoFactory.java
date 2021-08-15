@@ -3,7 +3,6 @@ package springbook.user.dao;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
-import springbook.user.domain.User;
 
 import javax.sql.DataSource;
 

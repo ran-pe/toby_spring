@@ -2,7 +2,6 @@ package springbook.user.dao;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.support.GenericXmlApplicationContext;
 import springbook.user.domain.User;
 
 import java.sql.SQLException;
@@ -26,16 +25,20 @@ public class UserDaoTest {
         UserDao userDao = context.getBean("userDao", UserDao.class);
         */
         User user = new User();
-        user.setId("horany12");
-        user.setName("영란12");
+        user.setId("horany14");
+        user.setName("영란14");
         user.setPassword("eodfks09");
         userDao.add(user);
         System.out.println(user.getId() + " 등록 성공");
 
         User user2 = userDao.get(user.getId());
-        System.out.println(user2.getName());
-        System.out.println(user2.getPassword());
-        System.out.println(user2.getId() + " 조회 성공");
+        if (!user.getName().equals(user2.getName())) {
+            System.out.println("테스트 실패(name)");
+        } else if (!user.getPassword().equals(user2.getPassword())) {
+            System.out.println("테스트 실패(password)");
+        } else {
+            System.out.println("조회 테스트 성공");
+        }
 
         // 오브젝트의 동일성과 동등성 테스트
         /*
