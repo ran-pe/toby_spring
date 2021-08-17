@@ -14,10 +14,14 @@ public class UserDao {
     private DataSource dataSource;
 
     public void setDataSource(DataSource dataSource) {
+        this.jdbcContext = new JdbcContext();
+        this.jdbcContext.setDataSource(dataSource);
         this.dataSource = dataSource;
     }
 
-    // 임시 DBConnector
+    private JdbcContext jdbcContext;
+
+// 임시 DBConnector
 //    private ConnectionMaker connectionMaker;
 
     /*
@@ -35,16 +39,49 @@ public class UserDao {
     }
     */
 
-    public void add(User user) throws SQLException {
-        Connection c = dataSource.getConnection();
-        PreparedStatement ps = c.prepareStatement("insert into users(id, name, password) value(?,?,?)");
-        ps.setString(1, user.getId());
-        ps.setString(2, user.getName());
-        ps.setString(3, user.getPassword());
+    public void add(final User user) throws SQLException {
+        // 전략패턴 사용시 문제점
+        // 1. DAO 메소드마다 새로운 StatementStrategy 구현 클래스를 만들어야 한다.
+        // 2. DAO 메소드에서 StatementStrategy에 전달할 User와 같은 부가적인 정보가 있는 경우,
+        //    이를 위해 오브젝트를 전달받는 생성자와 이를 저장해둘 인스턴스 변수를 번거롭게 만들어야 한다.
+        // 해결방법 1: 내부 로컬클래스
+        /*
+        class AddStatement implements StatementStrategy {
 
-        ps.executeUpdate();
-        ps.close();
-        c.close();
+            @Override
+            public PreparedStatement makePreparedStatement(Connection c) throws SQLException {
+                PreparedStatement ps = c.prepareStatement("insert into users(id, name, password) value(?,?,?)");
+
+                ps.setString(1, user.getId());
+                ps.setString(2, user.getName());
+                ps.setString(3, user.getPassword());
+
+                return ps;
+            }
+        }
+        StatementStrategy statementStrategy = new AddStatement();
+        jdbcContextWithStatementStrategy(statementStrategy);
+
+        */
+        // 해결방법 2: 내부 익명클래스
+        /*
+        this.jdbcContext.workWithStatementStrategy(new StatementStrategy() {
+            @Override
+            public PreparedStatement makePreparedStatement(Connection c) throws SQLException {
+                PreparedStatement ps = c.prepareStatement("insert into users(id, name, password) value(?,?,?)");
+
+                ps.setString(1, user.getId());
+                ps.setString(2, user.getName());
+                ps.setString(3, user.getPassword());
+
+                return ps;
+            }
+        });
+        */
+
+        this.jdbcContext.executeSetSql("insert into users(id, name, password) value(?,?,?)", user);
+
+
     }
 
     public User get(String id) throws SQLException {
@@ -65,34 +102,117 @@ public class UserDao {
         ps.close();
         c.close();
 
-        if(user == null) {
+        if (user == null) {
             throw new EmptyResultDataAccessException(1);
         }
 
         return user;
     }
 
+    /**
+     * deleteAll() 컨텍스트 정리
+     * DB커넥션 가져오기
+     * PreparedStatement를 만들어줄 외부기능 호출하기 --> 전략패턴의 전략
+     * 전달받은 PreparedStatement 실행하기
+     * 예외가 발생하면 이를 다시 메소드 밖으로 던지기
+     * 모든 경우에 만들어진 PreparedStatement와 Connection을 적절히 닫아주기
+     */
     public void deleteAll() throws SQLException {
-        Connection c = dataSource.getConnection();
-        PreparedStatement ps = c.prepareStatement("delete from users");
-        ps.executeUpdate();
-        ps.close();
-        c.close();
+        this.jdbcContext.executeSql("delete from users");
+        /*
+        StatementStrategy statementStrategy = new DeleteAllStatement(); // 선정한 전략 클래스의 오브젝트 생성
+        jdbcContextWithStatementStrategy(statementStrategy);    //컨텍스트 호출, 전략 오브젝트 전달
+        */
+
+        // 내부 익명클래스
+        /*
+        jdbcContextWithStatementStrategy(new StatementStrategy() {
+            @Override
+            public PreparedStatement makePreparedStatement(Connection c) throws SQLException {
+                PreparedStatement ps = c.prepareStatement("delete from users");
+                return ps;
+            }
+        });
+        */
+    }
+
+    // 템플릿 메소드 패턴을 적용 -> userDao 역시 abstract 이 되어야함
+//    abstract protected PreparedStatement makeStatement(Connection c) throws SQLException;
+
+    private PreparedStatement makeStatement(Connection c) throws SQLException {
+        PreparedStatement ps = null;
+        ps = c.prepareStatement("delete from users");
+        return ps;
     }
 
     public int getCount() throws SQLException {
-        Connection c = dataSource.getConnection();
-        PreparedStatement ps = c.prepareStatement("select count(*) from users");
-        ResultSet rs = ps.executeQuery();
-        rs.next();
-        int count = rs.getInt(1);
+        Connection c = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
 
-        rs.close();
-        ps.close();
-        c.close();
+        try {
+            c = dataSource.getConnection();
+            ps = ps = c.prepareStatement("select count(*) from users");
+            rs = ps.executeQuery();
+            rs.next();
+            return rs.getInt(1);
+        } catch (SQLException e) {
+            throw e;
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
 
-        return count;
+                }
+            }
+
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+
+                }
+            }
+
+            if (c != null) {
+                try {
+                    c.close();
+                } catch (SQLException e) {
+
+                }
+            }
+        }
     }
+
+    // 메소드를 클래스로 분리
+    /*
+    public void jdbcContextWithStatementStrategy(StatementStrategy statementStrategy) throws SQLException {
+        Connection c = null;
+        PreparedStatement ps = null;
+
+        try {
+            c = dataSource.getConnection();
+            ps = statementStrategy.makePreparedStatement(c);
+
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw e;
+        } finally {
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+                }
+            }
+            if (c != null) {
+                try {
+                    c.close();
+                } catch (SQLException e) {
+                }
+            }
+        }
+    */
 
     //2.. 추상메소드로 구현한 소스
 //    public abstract Connection getConnection() throws ClassNotFoundException, SQLException;
