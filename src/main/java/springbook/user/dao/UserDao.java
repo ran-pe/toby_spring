@@ -1,6 +1,10 @@
 package springbook.user.dao;
 
-import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.core.RowMapper;
 import springbook.user.domain.User;
 
 import javax.sql.DataSource;
@@ -8,15 +12,18 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 
 public class UserDao {
 
-    private DataSource dataSource;
+    //    private DataSource dataSource;
+    private JdbcTemplate jdbcTemplate;
 
     public void setDataSource(DataSource dataSource) {
-        this.jdbcContext = new JdbcContext();
-        this.jdbcContext.setDataSource(dataSource);
-        this.dataSource = dataSource;
+//        this.jdbcContext = new JdbcContext();
+//        this.jdbcContext.setDataSource(dataSource);
+        this.jdbcTemplate = new JdbcTemplate(dataSource);
+//        this.dataSource = dataSource;
     }
 
     private JdbcContext jdbcContext;
@@ -79,12 +86,17 @@ public class UserDao {
         });
         */
 
-        this.jdbcContext.executeSetSql("insert into users(id, name, password) value(?,?,?)", user);
+        //this.jdbcContext.executeSetSql("insert into users(id, name, password) value(?,?,?)", user);
+        this.jdbcTemplate.update("insert into users(id, name, password) value(?,?,?)", user.getId(), user.getName(), user.getPassword());
 
 
     }
 
     public User get(String id) throws SQLException {
+        return this.jdbcTemplate.queryForObject("select * from users where id = ?",
+                new Object[]{id}, this.userRowMapper);
+
+        /*
         Connection c = dataSource.getConnection();
         PreparedStatement ps = c.prepareStatement("select * from users where id = ?");
         ps.setString(1, id);
@@ -107,6 +119,11 @@ public class UserDao {
         }
 
         return user;
+        */
+    }
+
+    public List<User> getAll() {
+        return this.jdbcTemplate.query("select * from users order by id", this.userRowMapper);
     }
 
     /**
@@ -118,7 +135,9 @@ public class UserDao {
      * 모든 경우에 만들어진 PreparedStatement와 Connection을 적절히 닫아주기
      */
     public void deleteAll() throws SQLException {
-        this.jdbcContext.executeSql("delete from users");
+        this.jdbcTemplate.update("delete from users");
+//        this.jdbcContext.executeSql("delete from users");
+
         /*
         StatementStrategy statementStrategy = new DeleteAllStatement(); // 선정한 전략 클래스의 오브젝트 생성
         jdbcContextWithStatementStrategy(statementStrategy);    //컨텍스트 호출, 전략 오브젝트 전달
@@ -145,7 +164,17 @@ public class UserDao {
         return ps;
     }
 
-    public int getCount() throws SQLException {
+    public int getCount() {
+        return this.jdbcTemplate.queryForObject("select count(*) from users", Integer.class);
+
+        /*
+        return this.jdbcTemplate.query("select count(*) from users", rs -> {
+            rs.next();
+            return rs.getInt(1);
+        });
+        */
+
+        /*
         Connection c = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
@@ -183,6 +212,39 @@ public class UserDao {
                 }
             }
         }
+        */
+    }
+
+    /**
+     * 재사용 가능하도록 독립시킨 RowMapper
+     */
+    private RowMapper<User> userRowMapper = new RowMapper<User>() {
+        @Override
+        public User mapRow(ResultSet rs, int rowNum) throws SQLException {
+            User user = new User();
+            user.setId(rs.getString("id"));
+            user.setName(rs.getString("name"));
+            user.setPassword(rs.getString("password"));
+            return user;
+        }
+    };
+
+
+    /**
+     * JdbcTemplate을 이용해 만든 getCount()
+     */
+    public int getCountWithJdbcTemplate() {
+        return this.jdbcTemplate.query(new PreparedStatementCreator() {
+            @Override
+            public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
+                return con.prepareStatement("select count(*) from users");
+            }
+        }, new ResultSetExtractor<Integer>() {
+            public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
+                rs.next();
+                return rs.getInt(1);
+            }
+        });
     }
 
     // 메소드를 클래스로 분리

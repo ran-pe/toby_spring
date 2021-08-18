@@ -2,19 +2,13 @@ package springbook.user.dao;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import springbook.user.domain.User;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
+import java.util.List;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -83,5 +77,38 @@ public class UserDaoTest {
 
         userDao.get("unknwon_id");
     }
+
+    @Test
+    public void getAll() throws SQLException {
+        userDao.deleteAll();
+
+        List<User> userList = userDao.getAll();
+        assertThat(userList.size(), is(0));
+
+        userDao.add(user1);
+        List<User> userList1 = userDao.getAll();
+        assertThat(userList1.size(), is(1));
+        checkSameUser(user1, userList1.get(0));
+
+        userDao.add(user2);
+        List<User> userList2 = userDao.getAll();
+        assertThat(userList2.size(), is(2));
+        checkSameUser(user1, userList2.get(0));
+        checkSameUser(user2, userList2.get(1));
+
+        userDao.add(user3);
+        List<User> userList3 = userDao.getAll();
+        assertThat(userList3.size(), is(3));
+        checkSameUser(user1, userList3.get(0));
+        checkSameUser(user2, userList3.get(1));
+        checkSameUser(user3, userList3.get(2));
+    }
+
+    private void checkSameUser(User user1, User user2) {
+        assertThat(user1.getId(), is(user2.getId()));
+        assertThat(user1.getName(), is(user2.getName()));
+        assertThat(user1.getPassword(), is(user2.getPassword()));
+    }
+
 
 }
