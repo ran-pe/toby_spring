@@ -2,23 +2,36 @@ package springbook.user.dao;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
+import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
+import org.springframework.jdbc.support.SQLExceptionTranslator;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import springbook.user.domain.User;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
-//@RunWith(SpringJUnit4ClassRunner.class)
-//@ContextConfiguration(locations = "/test-applicationContext.xml")
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations = "/test-applicationContext.xml")
 //@DirtiesContext
 public class UserDaoTest {
 
+    @Autowired
     private UserDao userDao;
+    @Autowired
+    private DataSource dataSource;
+
     private User user1;
     private User user2;
     private User user3;
@@ -29,11 +42,11 @@ public class UserDaoTest {
         this.user2 = new User("horany2", "영란2", "eodfks09");
         this.user3 = new User("horany3", "영란3", "eodfks09");
 
-        userDao = new UserDao();
-        DataSource dataSource = new SingleConnectionDataSource(
-                "jdbc:mysql://localhost/springbookTest?serverTimezone=UTC", "youngran", "eodfks09", true
-        );
-        userDao.setDataSource(dataSource);
+//        userDao = new UserDaoJdbc();
+//        DataSource dataSource = new SingleConnectionDataSource(
+//                "jdbc:mysql://localhost/springbookTest?serverTimezone=UTC", "youngran", "eodfks09", true
+//        );
+//        userDao.setDataSource(dataSource);
     }
 
     @Test
@@ -110,5 +123,29 @@ public class UserDaoTest {
         assertThat(user1.getPassword(), is(user2.getPassword()));
     }
 
+    @Test(expected = DuplicateKeyException.class)
+    public void duplicateKey() {
+        userDao.deleteAll();
+        userDao.add(user1);
+        userDao.add(user1);
+    }
 
+    /**
+     * SQL Exception 전환 기능의 학습 테스트
+     */
+    /*
+    @Test
+    public void sqlExceptionTranslate() {
+        userDao.deleteAll();
+
+        try {
+            userDao.add(user1);
+            userDao.add(user1);
+        } catch (DuplicateKeyException ex) {
+            SQLException sqlEx = (SQLException) ex.getRootCause();
+            SQLExceptionTranslator set = new SQLErrorCodeSQLExceptionTranslator(this.dataSource);
+            assertThat(set.translate(null, null, sqlEx), is(DuplicateKeyException.class));
+        }
+    }
+    */
 }

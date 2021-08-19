@@ -10,7 +10,7 @@ import javax.sql.DataSource;
 public class DaoFactory {
 
     @Bean
-    public UserDao userDao() throws ClassNotFoundException {
+    public UserDaoJdbc userDao() throws ClassNotFoundException {
         /*
         // 생성자를 이용한 주입방식
         return new UserDao(connectionMaker());
@@ -24,7 +24,7 @@ public class DaoFactory {
         */
 
         // DataSource 타입의 빈을 DI 받는 userDao() 빈 정의 메소드
-        UserDao userDao = new UserDao();
+        UserDaoJdbc userDao = new UserDaoJdbc();
         userDao.setDataSource(dataSource());
         return userDao;
 
