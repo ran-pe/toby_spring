@@ -4,6 +4,27 @@ public class User {
     String id;
     String name;
     String password;
+    Level level;
+    int login;  // 로그인횟수
+    int recommend;  // 추천수
+
+    public User() {
+    }
+
+    public User(String id, String name, String password) {
+        this.id = id;
+        this.name = name;
+        this.password = password;
+    }
+
+    public User(String id, String name, String password, Level level, int login, int recommend) {
+        this.id = id;
+        this.name = name;
+        this.password = password;
+        this.level = level;
+        this.login = login;
+        this.recommend = recommend;
+    }
 
     public String getId() {
         return id;
@@ -29,12 +50,28 @@ public class User {
         this.password = password;
     }
 
-    public User(String id, String name, String password) {
-        this.id = id;
-        this.name = name;
-        this.password = password;
+    public Level getLevel() {
+        return level;
     }
 
-    public User() {
+    public void setLevel(Level level) {
+        this.level = level;
     }
+
+    public int getLogin() {
+        return login;
+    }
+
+    public void setLogin(int login) {
+        this.login = login;
+    }
+
+    public int getRecommend() {
+        return recommend;
+    }
+
+    public void setRecommend(int recommend) {
+        this.recommend = recommend;
+    }
+
 }
