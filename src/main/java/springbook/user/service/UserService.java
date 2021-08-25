@@ -1,9 +1,18 @@
 package springbook.user.service;
 
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import springbook.user.dao.UserDao;
 import springbook.user.domain.Level;
 import springbook.user.domain.User;
 
+import javax.naming.InitialContext;
+import javax.sql.DataSource;
+import java.sql.Connection;
 import java.util.List;
 
 public class UserService {
@@ -13,8 +22,20 @@ public class UserService {
         this.userDao = userDao;
     }
 
-//    public static final int MIN_LOGCOUNT_FOR_SILVER = 50;
-//    public static final int MIN_RECCOMEND_FOR_GOLD = 30;
+    private DataSource dataSource;
+
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    private PlatformTransactionManager transactionManager;
+
+    public void setTransactionManager(PlatformTransactionManager transactionManager) {
+        this.transactionManager = transactionManager;
+    }
+
+    public static final int MIN_LOGCOUNT_FOR_SILVER = 50;
+    public static final int MIN_RECCOMEND_FOR_GOLD = 30;
 
     /**
      * 사용자 레벨 업그레이드 메소드
@@ -24,25 +45,73 @@ public class UserService {
      * SILVER 레벨이면서 30번 이상 추천을 받으면 GOLD 레벨이 된다.
      * 사용자 레벨의 변경작업은 일정한 주기를 가지고 일괄적으로 진행된다. 변경 작업 전에는 조건을 충족하더라도 레벨의 변경이 일어나지 않는다.
      */
-//    public void upgradeLevels() {
-//        List<User> userList = userDao.getAll();
-//        for (User user : userList) {
-//            if (canUpgradeLevel(user)) {
-//                upgradeLevel(user);
-//            }
-//        }
-//    }
 
-//    public void upgradeLevel(User user) {
-////        if(user.getLevel() == Level.BASIC) {
-////            user.setLevel(Level.SILVER);
-////        } else if(user.getLevel() == Level.SILVER) {
-////            user.setLevel(Level.GOLD);
-////        }
-//        // 간결해진 upgradeLevel
-//        user.upgradeLevel();
-//        userDao.update(user);
-//    }
+    /**
+     * 트랜잭션 동기화 방식을 적용한 UserService
+     * @throws Exception
+     */
+    /*
+    public void upgradeLevels() throws Exception {
+        // 트랜잭션 동기화 관리자를 이용해 동기화 작업을 초기화한다.
+        //DB커넥션을 생성하고 트랙잭션을 시작한다. 이후의 DAO 작업은 모두 여기서 시작한 트랜잭션 안에서 진행된다.
+        TransactionSynchronizationManager.initSynchronization();
+
+        //DB커넥션 생성과 동기화를 함께 해주는 유틸리티 메소드
+        Connection c = DataSourceUtils.getConnection(dataSource);
+        c.setAutoCommit(false);
+
+        try {
+            List<User> userList = userDao.getAll();
+            for (User user : userList) {
+                if (canUpgradeLevel(user)) {
+                    upgradeLevel(user);
+                }
+            }
+            c.commit();
+        } catch (Exception e) {
+            c.rollback();
+            throw e;
+        }finally {
+            // 스프링 유틸리티 메소드를 이용해 DB 커넥션을 안전하게 닫는다.
+            DataSourceUtils.releaseConnection(c, dataSource);
+            TransactionSynchronizationManager.unbindResource(this.dataSource);
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+    */
+
+    /**
+     * 스프링의 트랜잭션 추상화 API를 적용한 upgradeLevels
+     * @throws Exception
+     */
+    public void upgradeLevels() throws Exception {
+        TransactionStatus status = this.transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+        try {
+            List<User> userList = userDao.getAll();
+            for (User user : userList) {
+                if (canUpgradeLevel(user)) {
+                    upgradeLevel(user);
+                }
+            }
+            this.transactionManager.commit(status);
+        } catch (RuntimeException e) {
+            this.transactionManager.rollback(status);
+            throw e;
+        }finally {
+//            // 스프링 유틸리티 메소드를 이용해 DB 커넥션을 안전하게 닫는다.
+//            DataSourceUtils.releaseConnection(c, dataSource);
+//            TransactionSynchronizationManager.unbindResource(this.dataSource);
+//            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+
+    public void upgradeLevel(User user) {
+        // 간결해진 upgradeLevel
+        user.upgradeLevel();
+        userDao.update(user);
+    }
 
     /**
      * 업그레이드 가능 확인 메소드
@@ -50,19 +119,19 @@ public class UserService {
      * @param user
      * @return
      */
-//    public boolean canUpgradeLevel(User user) {
-//        Level currentLevel = user.getLevel();
-//        switch (currentLevel) {
-//            case BASIC:
-//                return (user.getLogin() >= MIN_LOGCOUNT_FOR_SILVER);
-//            case SILVER:
-//                return (user.getRecommend() >= MIN_RECCOMEND_FOR_GOLD);
-//            case GOLD:
-//                return false;
-//            default:
-//                throw new IllegalArgumentException("Unknown Level: " + currentLevel);
-//        }
-//    }
+    public boolean canUpgradeLevel(User user) {
+        Level currentLevel = user.getLevel();
+        switch (currentLevel) {
+            case BASIC:
+                return (user.getLogin() >= MIN_LOGCOUNT_FOR_SILVER);
+            case SILVER:
+                return (user.getRecommend() >= MIN_RECCOMEND_FOR_GOLD);
+            case GOLD:
+                return false;
+            default:
+                throw new IllegalArgumentException("Unknown Level: " + currentLevel);
+        }
+    }
     /* 리펙토링전 코드
     public void upgradeLevels() {
         List<User> userList = userDao.getAll();
