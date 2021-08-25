@@ -22,4 +22,8 @@
     <bean id="userService" class="springbook.user.service.UserService">
         <property name="userDao" ref="userDao"></property>
     </bean>
+
+    <bean id="userLevelUpgrade" class="springbook.user.service.UserLevelUpgrade">
+        <property name="userDao" ref="userDao"></property>
+    </bean>
 </beans>

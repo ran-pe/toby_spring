@@ -9,6 +9,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import springbook.user.dao.UserDao;
 import springbook.user.domain.Level;
 import springbook.user.domain.User;
+import springbook.user.service.UserLevelUpgrade;
 import springbook.user.service.UserService;
 
 import java.util.Arrays;
@@ -18,6 +19,9 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThat;
 
+import static springbook.user.service.UserLevelUpgrade.MIN_LOGCOUNT_FOR_SILVER;
+import static springbook.user.service.UserLevelUpgrade.MIN_RECCOMEND_FOR_GOLD;
+
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/test-applicationContext.xml")
 public class UserServiceTest {
@@ -26,6 +30,9 @@ public class UserServiceTest {
 
     @Autowired
     UserDao userDao;
+
+    @Autowired
+    UserLevelUpgrade userLevelUpgrade;
 
     List<User> userList;
 
@@ -37,17 +44,18 @@ public class UserServiceTest {
     @Before
     public void setUp() {
         userList = Arrays.asList(
-                new User("id1", "베이직", "p1", Level.BASIC, 49, 0),
-                new User("id2", "실버될베이직", "p2", Level.BASIC, 50, 0),
-                new User("id3", "실버", "p3", Level.SILVER, 60, 29),
-                new User("id4", "골드될실버", "p4", Level.SILVER, 60, 30),
-                new User("id5", "골드", "p5", Level.GOLD, 100, 100)
+                new User("id1", "베이직", "p1", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER - 1, 0),
+                new User("id2", "실버될베이직", "p2", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0),
+                new User("id3", "실버", "p3", Level.SILVER, 60, MIN_RECCOMEND_FOR_GOLD - 1),
+                new User("id4", "골드될실버", "p4", Level.SILVER, 60, MIN_RECCOMEND_FOR_GOLD),
+                new User("id5", "골드", "p5", Level.GOLD, 100, Integer.MAX_VALUE)
         );
     }
 
     /**
      * 사용자 레벨 업그레이드 테스트
      */
+    /*
     @Test
     public void upgradeLevels() {
         userDao.deleteAll();
@@ -64,11 +72,43 @@ public class UserServiceTest {
         checkLevel(userList.get(3), Level.GOLD);
         checkLevel(userList.get(4), Level.GOLD);
     }
+    */
 
+    /**
+     * 개선한 upgradeLevels 테스트
+     */
+    @Test
+    public void upgradeLevels() {
+        userDao.deleteAll();
+
+        for (User user : userList) {
+            userDao.add(user);
+        }
+
+        userLevelUpgrade.upgradeLevels();
+
+        checkLevelUpgraded(userList.get(0), false);
+        checkLevelUpgraded(userList.get(1), true);
+        checkLevelUpgraded(userList.get(2), false);
+        checkLevelUpgraded(userList.get(3), true);
+        checkLevelUpgraded(userList.get(4), false);
+    }
+
+    private void checkLevelUpgraded(User user, boolean upgraded) {
+        User userUpdate = userDao.get(user.getId());
+        if (upgraded) {
+            assertThat(userUpdate.getLevel(), is(user.getLevel().nextLevel()));
+        } else {
+            assertThat(userUpdate.getLevel(), is(user.getLevel()));
+        }
+    }
+
+    /*
     private void checkLevel(User user, Level expectedLevel) {
         User userUpdate = userDao.get(user.getId());
         assertThat(userUpdate.getLevel(), is(expectedLevel));
     }
+    */
 
     /**
      * add() 메소드의 테스트
