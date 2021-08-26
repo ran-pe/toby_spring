@@ -19,6 +19,7 @@ dependencies {
     implementation "org.springframework.boot:spring-boot-starter-jdbc"
     // https://mvnrepository.com/artifact/commons-io/commons-io
     implementation 'commons-io:commons-io:2.6'
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 }
 
 test {

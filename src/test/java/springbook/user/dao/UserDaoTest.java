@@ -34,9 +34,9 @@ public class UserDaoTest {
 
     @Before
     public void setUp() {
-        this.user1 = new User("horany1", "영란1", "eodfks09", Level.BASIC, 1, 0);
-        this.user2 = new User("horany2", "영란2", "eodfks09", Level.SILVER, 55, 10);
-        this.user3 = new User("horany3", "영란3", "eodfks09", Level.GOLD, 100, 40);
+        this.user1 = new User("horany1", "영란1", "eodfks09", Level.BASIC, 1, 0, "horany1@mail.com");
+        this.user2 = new User("horany2", "영란2", "eodfks09", Level.SILVER, 55, 10, "horany2@mail.com");
+        this.user3 = new User("horany3", "영란3", "eodfks09", Level.GOLD, 100, 40, "horany3@mail.com");
 
 //        userDao = new UserDaoJdbc();
 //        DataSource dataSource = new SingleConnectionDataSource(
@@ -118,6 +118,7 @@ public class UserDaoTest {
         assertThat(user1.getLevel(), is(user2.getLevel()));
         assertThat(user1.getLogin(), is(user2.getLogin()));
         assertThat(user1.getRecommend(), is(user2.getRecommend()));
+        assertThat(user1.getEmail(), is(user2.getEmail()));
     }
 
     @Test(expected = DuplicateKeyException.class)
@@ -139,6 +140,7 @@ public class UserDaoTest {
         user1.setLevel(Level.GOLD);
         user1.setLogin(1000);
         user1.setRecommend(999);
+        user1.setEmail("tester@mail.com");
 
         userDao.update(user1);
 
