@@ -22,13 +22,16 @@
 
     <bean id="userDao" class="springbook.user.dao.UserDaoJdbc">
         <property name="dataSource" ref="dataSource"></property>
-<!--        <property name="jdbcContext" ref="jdbcContext"></property>-->
     </bean>
 
 <!--     데코레이터 -->
-    <bean id="userService" class="springbook.user.service.UserServiceTx">
-        <property name="transactionManager" ref="transactionManager"></property>
-        <property name="userService" ref="userServiceImpl"></property>
+    <bean id="userService" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="target" ref="userServiceImpl"></property>
+        <property name="interceptorNames">
+            <list>
+                <value>transactionAdvisor</value>
+            </list>
+        </property>
     </bean>
 
     <!--    타깃-->
@@ -37,11 +40,21 @@
         <property name="mailSender" ref="mailSender"></property>
     </bean>
 
-
-
-
     <bean id="userLevelUpgrade" class="springbook.user.service.UserLevelUpgrade">
         <property name="userDao" ref="userDao"></property>
+    </bean>
+
+    <bean id="transactionAdvice" class="springbook.user.service.TransactionAdvice">
+        <property name="transactionManager" ref="transactionManager"></property>
+    </bean>
+
+    <bean id="transactionPointCut" class="org.springframework.aop.support.NameMatchMethodPointcut">
+        <property name="mappedName" value="upgrade*"></property>
+    </bean>
+
+    <bean id="transactionAdvisor" class="org.springframework.aop.support.DefaultBeanFactoryPointcutAdvisor">
+        <property name="advice" ref="transactionAdvice"></property>
+        <property name="pointcut" ref="transactionPointCut"></property>
     </bean>
 
 </beans>
